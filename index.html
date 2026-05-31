@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwiftRide - Premium Cab Booking</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            500: '#276EF1',
+                            600: '#1B57C9',
+                        },
+                        dark: {
+                            950: '#000000',
+                            900: '#0A0A0A',
+                            800: '#141414',
+                            700: '#1F1F1F',
+                            600: '#292929',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .dropdown:hover .dropdown-menu { display: block; }
+    </style>
+</head>
+<body class="bg-dark-950 text-white font-['Outfit']">
+
+    <!-- Navbar -->
+    <nav class="fixed top-0 left-0 right-0 z-50 glass h-16 flex items-center justify-between px-8 border-b border-white/5">
+        <div class="flex items-center gap-8">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="location.reload()">
+                <div class="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center font-bold text-xl text-white">S</div>
+                <span class="text-xl font-bold tracking-tight">SwiftRide</span>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-6">
+                <a href="#" class="text-gray-400 hover:text-white text-sm font-medium transition-colors">About Us</a>
+                <a href="#" class="text-gray-400 hover:text-white text-sm font-medium transition-colors">Help</a>
+                <a href="#" class="text-gray-400 hover:text-white text-sm font-medium transition-colors">Business</a>
+                
+                <!-- Language Dropdown -->
+                <div class="relative dropdown">
+                    <button class="flex items-center gap-1 text-gray-400 hover:text-white text-sm font-medium transition-colors">
+                        🌐 Language <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    <div class="dropdown-menu hidden absolute top-full left-0 mt-2 w-32 bg-dark-900 border border-white/5 rounded-xl py-2 shadow-xl animate-fade-in">
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-dark-800 transition-colors">English</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-dark-800 transition-colors">हिन्दी (Hindi)</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-400 hover:text-white hover:bg-dark-800 transition-colors">Español</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-6">
+            <button onclick="toggleStatsModal()" class="text-gray-400 hover:text-white text-sm font-medium transition-colors">
+                System Stats
+            </button>
+            <div id="auth-section" class="flex gap-4">
+                <button onclick="toggleLoginModal()" class="text-sm font-medium hover:text-brand-500 transition-colors">Log In</button>
+                <button onclick="toggleLoginModal(); switchTab('signup')" class="bg-white text-black px-4 py-2 rounded-full text-sm font-bold hover:bg-gray-200 transition-colors">Sign Up</button>
+            </div>
+            <div id="user-section" class="hidden flex items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <img id="user-avatar" src="" class="w-8 h-8 rounded-full border border-white/10" alt="Avatar">
+                    <span id="username-display" class="text-sm font-medium"></span>
+                </div>
+                <button onclick="logout()" class="text-gray-400 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex h-screen pt-16">
+        <!-- Sidebar -->
+        <aside class="sidebar glass border-r border-white/5 flex flex-col h-full animate-slide-up overflow-hidden">
+            <!-- Search Section -->
+            <div class="p-6 border-b border-white/5">
+                <div class="flex items-center justify-between mb-4">
+                    <h1 class="text-2xl font-bold">Plan your ride</h1>
+                    <div class="flex gap-2">
+                        <button id="set-pickup-btn" onclick="setMode('pickup')" class="text-[10px] uppercase font-bold px-2 py-1 rounded bg-brand-500 text-white transition-all">Set Pickup</button>
+                        <button id="set-dropoff-btn" onclick="setMode('dropoff')" class="text-[10px] uppercase font-bold px-2 py-1 rounded bg-dark-800 text-gray-400 transition-all">Set Dropoff</button>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="relative">
+                        <div class="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white"></div>
+                        <input id="pickup-input" type="text" placeholder="Set pickup location" class="w-full bg-dark-800 border border-white/5 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                    <div class="relative">
+                        <div class="absolute left-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-brand-500"></div>
+                        <input id="dropoff-input" type="text" placeholder="Enter destination" class="w-full bg-dark-800 border border-white/5 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-500 transition-colors">
+                    </div>
+                    <!-- Date Picker -->
+                    <div class="relative">
+                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">📅</div>
+                        <input id="booking-date" type="datetime-local" class="w-full bg-dark-800 border border-white/5 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-brand-500 transition-colors text-white">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Promo/Offers Section -->
+            <div id="promo-banner" class="p-4 mx-6 mt-6 rounded-2xl bg-gradient-to-br from-brand-600 to-indigo-800 flex items-center justify-between animate-fade-in">
+                <div>
+                    <p class="text-[10px] uppercase font-bold opacity-75 tracking-wider">India Launch Offer</p>
+                    <p class="font-bold text-sm">Flat ₹50 OFF first ride</p>
+                </div>
+                <div class="offer-badge">First50</div>
+            </div>
+
+            <!-- Ride Selection -->
+            <div id="cab-types-container" class="flex-1 overflow-y-auto p-6 scroll-smooth">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Choose a ride</p>
+                <div id="cabs-list" class="space-y-3">
+                    <!-- Loaded via JS -->
+                </div>
+            </div>
+
+            <!-- Booking Confirmation (Hidden by default) -->
+            <div id="active-ride-status" class="hidden flex-col items-center justify-center p-8 text-center animate-slide-up">
+                <div class="w-16 h-16 bg-success/20 rounded-full flex items-center justify-center mb-4">
+                    <svg class="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <h2 class="text-xl font-bold mb-2">Ride Confirmed!</h2>
+                <p class="text-gray-400 text-sm mb-6">Your driver is on the way. You can track their progress on the map.</p>
+                <div id="driver-info" class="w-full bg-dark-800 p-4 rounded-2xl flex items-center gap-4 mb-4">
+                    <!-- Driver details -->
+                </div>
+                <button onclick="location.reload()" class="text-sm font-medium text-gray-500 hover:text-white">Cancel Request</button>
+            </div>
+
+            <!-- Action Button -->
+            <div class="p-6 space-y-4">
+                <div id="promo-input-container" class="animate-fade-in">
+                    <input id="promo-code-input" type="text" placeholder="Promo Code (e.g. FIRST50)" class="w-full bg-dark-800 border border-white/5 rounded-xl p-3 text-xs focus:outline-none focus:border-brand-500 transition-colors uppercase">
+                </div>
+                <button id="book-btn" onclick="bookRide()" class="w-full btn-primary py-4 rounded-xl font-bold text-lg shadow-lg shadow-brand-500/20">
+                    Select a ride
+                </button>
+            </div>
+        </aside>
+
+        <!-- Map -->
+        <div id="map" class="flex-1"></div>
+    </main>
+
+    <!-- Modals (Login/Signup/Stats) -->
+    <!-- ... (Modals remain the same structure, but updated for INR in any displays) -->
+    
+    <div id="login-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div id="login-modal-content" class="bg-dark-900 border border-white/5 w-full max-w-md rounded-3xl p-8 scale-95 transition-transform duration-300">
+            <div class="flex justify-between items-center mb-8">
+                <h2 id="modal-title" class="text-3xl font-bold">Welcome back</h2>
+                <button onclick="toggleLoginModal()" class="text-gray-500 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="flex gap-4 mb-8 border-b border-white/5">
+                <button id="login-tab" onclick="switchTab('login')" class="pb-4 border-b-2 border-brand-500 text-white font-bold transition-all">Login</button>
+                <button id="signup-tab" onclick="switchTab('signup')" class="pb-4 border-b-2 border-transparent text-gray-500 font-bold transition-all">Sign Up</button>
+            </div>
+
+            <div id="login-form" class="space-y-4">
+                <input id="login-username" type="text" placeholder="Username" class="w-full bg-dark-800 border border-white/5 rounded-xl p-4 focus:outline-none focus:border-brand-500 transition-colors">
+                <input id="login-password" type="password" placeholder="Password" class="w-full bg-dark-800 border border-white/5 rounded-xl p-4 focus:outline-none focus:border-brand-500 transition-colors">
+                <button onclick="login()" class="w-full btn-primary py-4 rounded-xl font-bold mt-4">Login</button>
+            </div>
+
+            <div id="signup-form" class="hidden space-y-4">
+                <input id="signup-name" type="text" placeholder="Full Name" class="w-full bg-dark-800 border border-white/5 rounded-xl p-4 focus:outline-none focus:border-brand-500 transition-colors">
+                <input id="signup-username" type="text" placeholder="Username" class="w-full bg-dark-800 border border-white/5 rounded-xl p-4 focus:outline-none focus:border-brand-500 transition-colors">
+                <input id="signup-password" type="password" placeholder="Password" class="w-full bg-dark-800 border border-white/5 rounded-xl p-4 focus:outline-none focus:border-brand-500 transition-colors">
+                <button onclick="registerUser()" class="w-full btn-primary py-4 rounded-xl font-bold mt-4">Create Account</button>
+            </div>
+
+            <div class="mt-8 pt-8 border-t border-white/5 text-center">
+                <button onclick="seedDataAndLogin()" class="text-brand-500 hover:underline font-bold">Quick Setup (Demo)</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="stats-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300">
+        <div id="stats-modal-content" class="bg-dark-900 border border-white/5 w-full max-w-4xl rounded-3xl p-8 max-h-[80vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold">System Database</h2>
+                    <p class="text-gray-400 text-sm">Real-time visibility into the platform</p>
+                </div>
+                <button onclick="toggleStatsModal()" class="text-gray-500 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="stats-grid mb-12">
+                <div class="stat-card"><p class="text-gray-400 text-xs uppercase font-bold tracking-widest mb-1">Total Users</p><p id="stat-total-users" class="text-3xl font-bold">0</p></div>
+                <div class="stat-card"><p class="text-gray-400 text-xs uppercase font-bold tracking-widest mb-1">Total Drivers</p><p id="stat-total-drivers" class="text-3xl font-bold">0</p></div>
+                <div class="stat-card"><p class="text-gray-400 text-xs uppercase font-bold tracking-widest mb-1">Total Bookings</p><p id="stat-total-bookings" class="text-3xl font-bold">0</p></div>
+            </div>
+            <div class="grid grid-cols-2 gap-8">
+                <div><h3 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="w-2 h-2 bg-brand-500 rounded-full"></span> Active Drivers</h3><div id="drivers-list" class="space-y-4"></div></div>
+                <div><h3 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="w-2 h-2 bg-success rounded-full"></span> Recent Users</h3><div id="users-list" class="space-y-4"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 z-[200] glass px-6 py-4 rounded-2xl flex items-center gap-4 opacity-0 translate-y-[-20px] pointer-events-none transition-all duration-300">
+        <div id="toast-icon" class="text-2xl">🚗</div>
+        <div id="toast-message" class="text-sm font-medium"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
